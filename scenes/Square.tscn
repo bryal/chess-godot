@@ -1,9 +1,21 @@
-[gd_scene load_steps=2 format=3 uid="uid://c47ej6at5cfsg"]
+[gd_scene load_steps=3 format=3 uid="uid://c47ej6at5cfsg"]
 
 [ext_resource type="Script" path="res://src/Square.gd" id="1_1ckwb"]
 
-[node name="Square" type="Node2D"]
-script = ExtResource("1_1ckwb")
-white = true
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_q48rv"]
+size = Vector2(100, 100)
 
-[node name="Node2D" type="Node2D" parent="."]
+[node name="Square" type="Area2D"]
+script = ExtResource("1_1ckwb")
+color_white = Color(0.839216, 0.647059, 0.4, 1)
+color_black = Color(0.168627, 0.0627451, 0.00392157, 1)
+color_hover = Color(0.270588, 0.741176, 1, 0.521569)
+color_pressed = Color(0.270588, 0.741176, 1, 0.941176)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_q48rv")
+debug_color = Color(0, 0.596078, 0.694118, 0.0588235)
+
+[connection signal="input_event" from="." to="." method="_on_input_event"]
+[connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]
