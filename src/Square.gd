@@ -19,6 +19,13 @@ var hover: bool = false:
 var pressed: bool = false:
 	set(p): pressed = p; queue_redraw()
 
+# null implies that no piece occupies the square
+var occupant: Piece = null:
+	set(p):
+		p.position = self.position
+		p.queue_redraw()
+		occupant = p
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	pass # Replace with function body.
@@ -29,7 +36,7 @@ func _process(delta):
 
 func _draw():
 	var shape: CollisionShape2D = get_child(0)
-	var rect: Rect2 = shape.shape.get_rect()
+	var rect := shape.shape.get_rect()
 	var color = color_white if white else color_black
 	if pressed:
 		color = color.blend(color_pressed)
@@ -46,5 +53,5 @@ func _on_mouse_exited():
 
 func _on_input_event(viewport, event, shape_idx):
 	if event is InputEventMouseButton:
-		var mevent: InputEventMouseButton = event as InputEventMouseButton
+		var mevent := event as InputEventMouseButton
 		pressed = mevent.pressed

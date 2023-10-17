@@ -1,4 +1,5 @@
 @tool
+class_name Piece
 extends Sprite2D
 
 @export var role: Role:
