@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://cignb83mwufcr"]
+
+[ext_resource type="Script" path="res://src/Game.gd" id="1_kycfs"]
+[ext_resource type="Texture2D" uid="uid://b515fnw4vt3ss" path="res://sprites/pieces_sheet-wikimedia.png" id="2_2gxfb"]
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_nydko"]
+
+[node name="Game" type="Node2D"]
+script = ExtResource("1_kycfs")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(495, 18)
+texture = ExtResource("2_2gxfb")
+region_enabled = true
+region_rect = Rect2(0, 0, 426, 426)
+
+[node name="Sprite2D2" type="Sprite2D" parent="."]
+texture = SubResource("CanvasTexture_nydko")

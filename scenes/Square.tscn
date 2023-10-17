@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://c47ej6at5cfsg"]
+
+[ext_resource type="Script" path="res://src/Square.gd" id="1_1ckwb"]
+
+[node name="Square" type="Node2D"]
+script = ExtResource("1_1ckwb")
+white = true
+
+[node name="Node2D" type="Node2D" parent="."]
