@@ -122,10 +122,15 @@ static func piece_moves(piece_loc: Vector2i, board_st: BoardState, _hist: Array[
 	if piece == null:
 		return moves
 	match piece.role: # lots of todo
+		Piece.Role.QUEEN:
+			add_rook_moves(moves, piece_loc, board_st)
+			add_bishop_moves(moves, piece_loc, board_st)
+		Piece.Role.BISHOP:
+			add_bishop_moves(moves, piece_loc, board_st)
 		Piece.Role.KNIGHT:
 			add_knight_moves(moves, piece_loc, board_st)
-		_:
-			pass
+		Piece.Role.ROOK:
+			add_rook_moves(moves, piece_loc, board_st)
 	for i in range(moves.size()-1, -1, -1):
 		if threatens_king(moves[i]):
 			moves.remove_at(i)
@@ -139,14 +144,39 @@ static func add_knight_moves(moves: Array[Move], src: Vector2i, board: BoardStat
 		Vector2i( 1, -2), Vector2i(-1, -2)
 	]
 	for delta in deltas:
-		var dst: Vector2i = src + delta
-		if !in_bounds(dst):
-			continue
-		var move := jump_move(src, dst, board)
+		var move := jump_move(src, src + delta, board)
 		if move != null:
 			moves.push_back(move)
 
+static func add_rook_moves(moves: Array[Move], src: Vector2i, board: BoardState) -> void:
+	const dirs := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	for dir in dirs:
+		var dst := src
+		while true:
+			dst += dir
+			var move := jump_move(src, dst, board)
+			if move == null:
+				break
+			moves.push_back(move)
+			if move is Capture:
+				break
+
+static func add_bishop_moves(moves: Array[Move], src: Vector2i, board: BoardState) -> void:
+	const dirs := [Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]
+	for dir in dirs:
+		var dst := src
+		while true:
+			dst += dir
+			var move := jump_move(src, dst, board)
+			if move == null:
+				break
+			moves.push_back(move)
+			if move is Capture:
+				break
+
 static func jump_move(src: Vector2i, dst: Vector2i, board: BoardState) -> Move:
+	if !in_bounds(dst):
+		return null
 	var psrc := board.get_piece(src)
 	var pdst := board.get_piece(dst)
 	if pdst == null:
