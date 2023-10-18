@@ -6,7 +6,6 @@ const scene_square := preload("res://scenes/Square.tscn")
 const scene_piece := preload("res://scenes/Piece.tscn")
 
 var squares: Array[Square]
-var pieces: Array[Piece]
 
 var selected_piece: Piece = null
 
@@ -69,7 +68,6 @@ func _ready():
 		# print("white: %s, role: %s, pos: %s" % [white, role, pos])
 
 		var piece = scene_piece.instantiate()
-		pieces.push_back(piece)
 		piece.white = white
 		piece.role = role
 		square_by_algebraic(pos).add_child(piece)
@@ -100,15 +98,22 @@ func select_destination(dst: Square):
 		pass
 	else:
 		cancel_move()
+		if move is Capture:
+			var cmove: Capture = move as Capture
+			capture_piece(square_by_loc(cmove.capture).get_piece())
 		src_piece.reparent(dst, false)
 		src_piece.queue_redraw()
+		get_parent().turn_over()
+
+func capture_piece(piece: Piece):
+	piece.get_parent().remove_child(piece)
+	piece.queue_free()
 
 func cancel_move():
 	if selected_piece != null:
-		var selected_square: Square = selected_piece.get_parent()
-		selected_square.selected = false
 		selected_piece = null
 		for square in squares:
+			square.selected = false
 			square.target = null
 
 static func piece_moves(piece_loc: Vector2i, board_st: BoardState, _hist: Array[HistMove]) -> Array[Move]:
@@ -148,7 +153,7 @@ static func jump_move(src: Vector2i, dst: Vector2i, board: BoardState) -> Move:
 		return Move.new(dst)
 	if psrc.white == pdst.white:
 		return null
-	return null
+	return Capture.new(dst, dst)
 
 static func threatens_king(_move: Move) -> bool:
 	return false # todo
@@ -199,12 +204,13 @@ class PieceLite:
 
 class Move:
 	var dst: Vector2i
-
 	func _init(dst_: Vector2i):
 		dst = dst_
-
-#class Capture extends Move:
-#	var capture: Vector2i
+class Capture extends Move:
+	var capture: Vector2i
+	func _init(dst_: Vector2i, capture_: Vector2i):
+		super(dst_)
+		capture = capture_
 
 # class Castling extends Move
 # class Promotion extends Move

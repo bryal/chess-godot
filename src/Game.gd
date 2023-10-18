@@ -1,7 +1,10 @@
 extends Node2D
 
-var white_turn :bool :
+var white_turn: bool :
 	set(w): white_turn = w; $TurnLabel.text = "[center]" + ("White" if w else "Black") + "[/center]"
+
+func turn_over():
+	white_turn = !white_turn
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
