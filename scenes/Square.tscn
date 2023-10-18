@@ -7,10 +7,12 @@ size = Vector2(100, 100)
 
 [node name="Square" type="Area2D"]
 script = ExtResource("1_1ckwb")
-color_white = Color(0.878431, 0.690196, 0.454902, 1)
-color_black = Color(0.192157, 0.0784314, 0.00784314, 1)
-color_hover = Color(0.270588, 0.741176, 1, 0.564706)
+color_white = Color(0.894118, 0.709804, 0.482353, 1)
+color_black = Color(0.419608, 0.239216, 0.121569, 1)
+color_hover = Color(0.270588, 0.741176, 1, 0.470588)
 color_pressed = Color(0.270588, 0.741176, 1, 0.960784)
+color_selected = Color(1, 1, 0, 1)
+color_destination = Color(0, 1, 0, 0.823529)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_q48rv")
