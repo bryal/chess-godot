@@ -6,6 +6,7 @@ extends Sprite2D
 	set(r): role = r; update_sprite()
 @export var white: bool:
 	set(w): white = w; update_sprite()
+var unmoved: bool = true
 
 enum Role {
 	KING,

@@ -23,7 +23,7 @@ class HistPromotion extends HistMove:
 		super(orig, src_, move_)
 		prom = new
 
-var history: Array[HistMove] = []
+var last_move: HistMove = null
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -78,6 +78,7 @@ func _ready():
 		var piece = scene_piece.instantiate()
 		piece.white = white
 		piece.role = role
+		piece.unmoved = true
 		square_by_algebraic(pos).add_child(piece)
 
 func select_square(sq: Square):
@@ -96,7 +97,7 @@ func select_source(src: Square):
 		cancel_move()
 		selected_piece = src_piece
 		src.selected = true
-		for move in Board.piece_moves(src.loc, current_board_state(), history):
+		for move in Board.piece_moves(src.loc, current_board_state(), last_move):
 			square_by_loc(move.dst).target = move
 
 func select_destination(dst: Square):
@@ -109,23 +110,25 @@ func select_destination(dst: Square):
 		pass
 	else:
 		cancel_move()
-		history.push_back(HistMove.new(src_piece.role, src.loc, move))
+		last_move = HistMove.new(src_piece.role, src.loc, move)
 		if move is Capture:
 			var cmove := move as Capture
 			capture_piece(square_by_loc(cmove.capture).get_piece())
 		elif move is Castling:
 			var cmove := move as Castling
 			var passed_over: Vector2i = src.loc + (cmove.dst - src.loc).sign()
-			square_by_loc(cmove.rook).get_piece().reparent(square_by_loc(passed_over), false)
+			var rook_piece: Piece = square_by_loc(cmove.rook).get_piece()
+			rook_piece.reparent(square_by_loc(passed_over), false)
+			rook_piece.unmoved = false
 		src_piece.reparent(dst, false)
+		src_piece.unmoved = false
 		if src_piece.role == Piece.Role.PAWN and (dst.loc.y == 0 or dst.loc.y == 7):
 			get_parent().promotion_menu(src_piece)
 		else:
 			get_parent().turn_over()
 
 func select_promotion(piece: Piece, role: Piece.Role):
-	var hist_move: HistMove = history.pop_back()
-	history.push_back(HistPromotion.new(piece.role, role, hist_move.src, hist_move.move))
+	last_move = HistPromotion.new(piece.role, role, last_move.src, last_move.move)
 	piece.role = role
 	get_parent().turn_over()
 	get_parent().paused = false
@@ -143,26 +146,24 @@ func cancel_move():
 			square.selected = false
 			square.target = null
 
-static func piece_moves(piece_loc: Vector2i, board_st: BoardState, hist: Array[HistMove]) -> Array[Move]:
-	var moves := reckless_piece_moves(piece_loc, board_st, hist)
+static func piece_moves(piece_loc: Vector2i, board_st: BoardState, prev: HistMove) -> Array[Move]:
+	var moves := reckless_piece_moves(piece_loc, board_st, prev)
 	var piece := board_st.get_piece(piece_loc)
 	for i in range(moves.size()-1, -1, -1):
 		var hmove := HistMove.new(piece.role, piece_loc, moves[i])
-		hist.push_back(hmove)
-		if !threats_to_king(piece.white, board_st.with_move(hmove), hist).is_empty():
+		if !threats_to_king(piece.white, board_st.with_move(hmove), hmove).is_empty():
 			moves.remove_at(i)
-		hist.pop_back()
 	return moves
 
 # All legal moves, except that they may threaten their own king
-static func reckless_piece_moves(piece_loc: Vector2i, board_st: BoardState, hist: Array[HistMove]) -> Array[Move]:
+static func reckless_piece_moves(piece_loc: Vector2i, board_st: BoardState, prev: HistMove) -> Array[Move]:
 	var moves: Array[Move] = []
 	var piece := board_st.get_piece(piece_loc)
 	if piece == null:
 		return moves
 	match piece.role: # lots of todo
 		Piece.Role.KING:
-			add_king_moves(moves, piece_loc, board_st, hist)
+			add_king_moves(moves, piece_loc, board_st, prev)
 		Piece.Role.QUEEN:
 			add_rook_moves(moves, piece_loc, board_st)
 			add_bishop_moves(moves, piece_loc, board_st)
@@ -173,10 +174,10 @@ static func reckless_piece_moves(piece_loc: Vector2i, board_st: BoardState, hist
 		Piece.Role.ROOK:
 			add_rook_moves(moves, piece_loc, board_st)
 		Piece.Role.PAWN:
-			add_pawn_moves(moves, piece_loc, board_st, hist)
+			add_pawn_moves(moves, piece_loc, board_st, prev)
 	return moves
 
-static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState, hist: Array[HistMove]) -> void:
+static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState, prev: HistMove) -> void:
 	const deltas := orthogonal_dirs + diagonal_dirs
 	for delta in deltas:
 		var move := jump_move(src, src + delta, board)
@@ -186,36 +187,22 @@ static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState,
 	# Castling
 	var psrc := board.get_piece(src)
 	var y0 := 0 if psrc.white else 7
-	if src.x != 4 or src.y != y0:
+	if board.ever_moved(src):
 		return
-	var rooks := [Vector2i(0, y0), Vector2i(7, y0)]
-	for i in range(1, -1, -1):
-		var rook: Vector2i = rooks[i]
+	assert(src.x == 4 or src.y == y0)
+	for rook in [Vector2i(0, y0), Vector2i(7, y0)]:
+		if board.ever_moved(rook):
+			continue
 		var prook := board.get_piece(rook)
 		if prook == null or prook.role != Piece.Role.ROOK:
-			rooks.remove_at(i)
 			continue
 		var dx: int = sign(rook.x - src.x)
 		if range(src.x + dx, rook.x, dx).any(func(x: int) -> bool:
 			return board.get_piece(Vector2i(x, y0)) != null
 		):
-			rooks.remove_at(i)
-			continue
-	if rooks.is_empty():
-		return
-	if ever_moved(src, hist):
-		return
-	for rook in rooks:
-		if ever_moved(rook, hist):
 			continue
 		var dst: Vector2i = src + (rook - src).sign() * 2
 		moves.push_back(Castling.new(dst, rook))
-
-static func ever_moved(loc: Vector2i, hist: Array[HistMove]):
-	for move in hist:
-		if move.src == loc:
-			return true
-	return false
 
 static func add_knight_moves(moves: Array[Move], src: Vector2i, board: BoardState) -> void:
 	const deltas := [
@@ -253,7 +240,7 @@ static func add_bishop_moves(moves: Array[Move], src: Vector2i, board: BoardStat
 			if move is Capture:
 				break
 
-static func add_pawn_moves(moves: Array[Move], src: Vector2i, board: BoardState, hist: Array[HistMove]) -> void:
+static func add_pawn_moves(moves: Array[Move], src: Vector2i, board: BoardState, prev: HistMove) -> void:
 	var psrc := board.get_piece(src)
 	var dy := 1 if psrc.white else -1
 	var move1 := jump_move(src, src + Vector2i(0, dy), board)
@@ -272,9 +259,8 @@ static func add_pawn_moves(moves: Array[Move], src: Vector2i, board: BoardState,
 		if move is Capture:
 			moves.push_back(move)
 
-		if hist.is_empty():
+		if prev == null:
 			continue
-		var prev: HistMove = hist.back()
 		if (
 			prev.piece != Piece.Role.PAWN or
 			prev.src != src + Vector2i(dx, 2 * dy) or
@@ -297,7 +283,7 @@ static func jump_move(src: Vector2i, dst: Vector2i, board: BoardState) -> Move:
 		return null
 	return Capture.new(dst, dst)
 
-static func threats_to_king(king_white: bool, board: BoardState, hist: Array[HistMove]) -> Array[Vector2i]:
+static func threats_to_king(king_white: bool, board: BoardState, prev: HistMove) -> Array[Vector2i]:
 	var threats: Array[Vector2i] = []
 	var king_loc := Vector2i.LEFT
 	for x in 8:
@@ -312,7 +298,7 @@ static func threats_to_king(king_white: bool, board: BoardState, hist: Array[His
 			var psrc := board.get_piece(src)
 			if psrc == null or psrc.white == king_white:
 				continue
-			for move in reckless_piece_moves(src, board, hist):
+			for move in reckless_piece_moves(src, board, prev):
 				if move is Capture and move.capture == king_loc:
 					threats.push_back(src)
 					break
@@ -323,13 +309,17 @@ func current_board_state() -> BoardState:
 	for ix in 64:
 		var piece := squares[ix].get_piece()
 		if piece != null:
-			st.place_piece(Board.ix_to_loc(ix), PieceLite.new(piece.white, piece.role))
+			if piece.unmoved:
+				st.place_unmoved_piece(Board.ix_to_loc(ix), PieceLite.new(piece.white, piece.role))
+			else:
+				st.place_moved_piece(Board.ix_to_loc(ix), PieceLite.new(piece.white, piece.role))
 	return st
 
 class BoardState:
 	# each byte is a square, optionally with a piece (role & color)
 	# 0xFF => no piece
 	# highest bit set => white, unset => black
+	# second highest bit set => piece hasn't ever moved
 	# rest is role
 	var squares: PackedByteArray
 
@@ -343,7 +333,7 @@ class BoardState:
 		var sq: int = squares[Board.loc_to_ix(loc)]
 		if sq == 0xFF:
 			return null
-		return PieceLite.new(sq & 0x80, sq & 0x7F)
+		return PieceLite.new(sq & 0x80, sq & 0x3F)
 
 	func duplicate() -> BoardState:
 		return BoardState.new(squares.duplicate())
@@ -351,11 +341,17 @@ class BoardState:
 	func remove_piece(loc: Vector2i):
 		squares[Board.loc_to_ix(loc)] = 0xFF
 
-	func place_piece(loc: Vector2i, piece: PieceLite):
-		squares[Board.loc_to_ix(loc)] = piece.role | (0x80 if piece.white else 0x00)
+	func place_moved_piece(loc: Vector2i, piece: PieceLite):
+		squares[Board.loc_to_ix(loc)] = ((1<<7) if piece.white else 0) | (0<<6) | piece.role
+
+	func place_unmoved_piece(loc: Vector2i, piece: PieceLite):
+		squares[Board.loc_to_ix(loc)] = ((1<<7) if piece.white else 0) | (1<<6) | piece.role
+
+	func ever_moved(loc: Vector2i) -> bool:
+		return (squares[Board.loc_to_ix(loc)] & 0x40) == 0
 
 	func move_piece(src: Vector2i, dst: Vector2i):
-		place_piece(dst, get_piece(src))
+		place_moved_piece(dst, get_piece(src))
 		remove_piece(src)
 
 	func with_move(move: HistMove) -> BoardState:
@@ -373,7 +369,7 @@ class BoardState:
 			move_piece(move.rook, passed_over)
 		var piece := get_piece(src)
 		remove_piece(src)
-		place_piece(move.dst, PieceLite.new(piece.white, hmove.prom) if hmove is HistPromotion else piece)
+		place_moved_piece(move.dst, PieceLite.new(piece.white, hmove.prom) if hmove is HistPromotion else piece)
 
 class PieceLite:
 	var white: bool
