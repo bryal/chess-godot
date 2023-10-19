@@ -12,6 +12,18 @@ func turn_text():
 
 func turn_over():
 	white_turn = !white_turn
+	var check: bool = $Board.in_check()
+	var mate: bool = $Board.in_mate()
+	if check and mate:
+		$GameOver/Label.text = "[center]Checkmate![/center]"
+		$GameOver.visible = true
+	elif mate:
+		$GameOver/Label.text = "[center]Stalemate![/center]"
+		$GameOver.visible = true
+	elif check:
+		$CheckLabel.text = "[center]Check![/center]"
+	else:
+		$CheckLabel.text = ""
 
 func promotion_menu(piece: Piece):
 	paused = true
@@ -22,6 +34,7 @@ func promotion_menu(piece: Piece):
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	$CheckLabel.text = ""
 	white_turn = true
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
