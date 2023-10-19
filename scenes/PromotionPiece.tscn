@@ -1,0 +1,16 @@
+[gd_scene load_steps=4 format=3 uid="uid://dn2vjqk16fw3q"]
+
+[ext_resource type="Texture2D" uid="uid://b515fnw4vt3ss" path="res://sprites/pieces_sheet-wikimedia.png" id="1_s6j83"]
+[ext_resource type="Script" path="res://src/PromotionPiece.gd" id="2_hwcg8"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8y03q"]
+resource_local_to_scene = true
+atlas = ExtResource("1_s6j83")
+region = Rect2(426.667, 0, 426.667, 426.5)
+
+[node name="PromotionPiece" type="TextureRect"]
+texture = SubResource("AtlasTexture_8y03q")
+script = ExtResource("2_hwcg8")
+role = 1
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]

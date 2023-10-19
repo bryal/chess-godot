@@ -1,0 +1,76 @@
+[gd_scene load_steps=9 format=3 uid="uid://cweqiuskutqik"]
+
+[ext_resource type="Script" path="res://src/PromotionMenu.gd" id="1_60v06"]
+[ext_resource type="PackedScene" uid="uid://dn2vjqk16fw3q" path="res://scenes/PromotionPiece.tscn" id="2_olpr6"]
+[ext_resource type="Texture2D" uid="uid://b515fnw4vt3ss" path="res://sprites/pieces_sheet-wikimedia.png" id="2_x8r5v"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fk822"]
+bg_color = Color(1, 0.47451, 0.815686, 0.862745)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nnu1v"]
+resource_local_to_scene = true
+atlas = ExtResource("2_x8r5v")
+region = Rect2(426.667, 0, 426.667, 426.5)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3iywj"]
+resource_local_to_scene = true
+atlas = ExtResource("2_x8r5v")
+region = Rect2(1706.67, 0, 426.667, 426.5)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ulrd4"]
+resource_local_to_scene = true
+atlas = ExtResource("2_x8r5v")
+region = Rect2(853.333, 0, 426.667, 426.5)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_805ye"]
+resource_local_to_scene = true
+atlas = ExtResource("2_x8r5v")
+region = Rect2(1280, 0, 426.667, 426.5)
+
+[node name="PromotionMenu" type="PanelContainer"]
+offset_right = 856.0
+offset_bottom = 856.0
+scale = Vector2(0.5, 0.5)
+theme_override_styles/panel = SubResource("StyleBoxFlat_fk822")
+script = ExtResource("1_60v06")
+
+[node name="Title" type="RichTextLabel" parent="."]
+layout_mode = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 20
+theme_override_font_sizes/normal_font_size = 120
+bbcode_enabled = true
+text = "[center]Promotion![/center]"
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 60
+theme_override_constants/margin_top = 120
+theme_override_constants/margin_right = 60
+theme_override_constants/margin_bottom = 0
+
+[node name="Pieces" type="GridContainer" parent="MarginContainer"]
+layout_mode = 2
+columns = 2
+
+[node name="Queen" parent="MarginContainer/Pieces" instance=ExtResource("2_olpr6")]
+layout_mode = 2
+texture = SubResource("AtlasTexture_nnu1v")
+
+[node name="Rook" parent="MarginContainer/Pieces" instance=ExtResource("2_olpr6")]
+layout_mode = 2
+texture = SubResource("AtlasTexture_3iywj")
+role = 4
+
+[node name="Bishop" parent="MarginContainer/Pieces" instance=ExtResource("2_olpr6")]
+layout_mode = 2
+texture = SubResource("AtlasTexture_ulrd4")
+role = 2
+
+[node name="Knight" parent="MarginContainer/Pieces" instance=ExtResource("2_olpr6")]
+layout_mode = 2
+texture = SubResource("AtlasTexture_805ye")
+role = 3
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]

@@ -1,10 +1,29 @@
 extends Node2D
 
-var white_turn: bool :
-	set(w): white_turn = w; $TurnLabel.text = "[center]" + ("White" if w else "Black") + "[/center]"
+const scene_promotion_menu := preload("res://scenes/PromotionMenu.tscn")
+
+var white_turn: bool:
+	set(w): white_turn = w; $TurnLabel.text = turn_text()
+var paused: bool = false:
+	set(x): paused = x; $TurnLabel.text = "" if x else turn_text()
+
+func turn_text():
+	return "[center]" + ("White" if white_turn else "Black") + "[/center]"
 
 func turn_over():
 	white_turn = !white_turn
+
+func promotion_menu(piece: Piece):
+	paused = true
+	var menu := scene_promotion_menu.instantiate()
+	menu.position -= menu.size * menu.scale / 2.0
+	menu.piece = piece
+	add_child(menu)
+
+func select_promotion(piece: Piece, role: Piece.Role):
+	piece.role = role
+	turn_over()
+	paused = false
 
 # Called when the node enters the scene tree for the first time.
 func _ready():

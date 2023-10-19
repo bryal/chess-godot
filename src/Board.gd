@@ -77,6 +77,8 @@ func _ready():
 		square_by_algebraic(pos).add_child(piece)
 
 func select_square(sq: Square):
+	if get_parent().paused:
+		return
 	if selected_piece != null:
 		select_destination(sq)
 	else:
@@ -112,13 +114,18 @@ func select_destination(dst: Square):
 			var passed_over: Vector2i = src.loc + (cmove.dst - src.loc).sign()
 			square_by_loc(cmove.rook).get_piece().reparent(square_by_loc(passed_over), false)
 		src_piece.reparent(dst, false)
-		get_parent().turn_over()
+		if src_piece.role == Piece.Role.PAWN and (dst.loc.y == 0 or dst.loc.y == 7):
+			get_parent().promotion_menu(src_piece)
+		else:
+			get_parent().turn_over()
 
 func capture_piece(piece: Piece):
 	piece.get_parent().remove_child(piece)
 	piece.queue_free()
 
 func cancel_move():
+	if get_parent().paused:
+		return
 	if selected_piece != null:
 		selected_piece = null
 		for square in squares:
@@ -142,6 +149,8 @@ static func piece_moves(piece_loc: Vector2i, board_st: BoardState, hist: Array[H
 			add_knight_moves(moves, piece_loc, board_st)
 		Piece.Role.ROOK:
 			add_rook_moves(moves, piece_loc, board_st)
+		Piece.Role.PAWN:
+			add_pawn_moves(moves, piece_loc, board_st, hist)
 	for i in range(moves.size()-1, -1, -1):
 		if threatens_king(moves[i]):
 			moves.remove_at(i)
@@ -160,10 +169,7 @@ static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState,
 	var y0 := 0 if psrc.white else 7
 	if src.x != 4 or src.y != y0:
 		return
-	var rook_locs := [Vector2i(0, y0), Vector2i(7, y0)]
-	var rook1 := Vector2i(0, y0)
-	var rook2 := Vector2i(7, y0)
-	var rooks := [rook1, rook2]
+	var rooks := [Vector2i(0, y0), Vector2i(7, y0)]
 	for i in range(1, -1, -1):
 		var rook: Vector2i = rooks[i]
 		var prook := board.get_piece(rook)
@@ -227,6 +233,36 @@ static func add_bishop_moves(moves: Array[Move], src: Vector2i, board: BoardStat
 			moves.push_back(move)
 			if move is Capture:
 				break
+
+static func add_pawn_moves(moves: Array[Move], src: Vector2i, board: BoardState, hist: Array[HistMove]) -> void:
+	var psrc := board.get_piece(src)
+	var dy := 1 if psrc.white else -1
+	var move1 := jump_move(src, src + Vector2i(0, dy), board)
+	if move1 is Capture:
+		move1 = null
+	else:
+		moves.push_back(move1)
+	var move2 := jump_move(src, src + Vector2i(0, 2 * dy), board)
+	if move1 != null and move2 != null and not (move2 is Capture) and src.y == (1 if psrc.white else 6):
+		moves.push_back(move2)
+
+	for dx in [-1, 1]:
+		var move := jump_move(src, src + Vector2i(dx, dy), board)
+		if move == null:
+			continue
+		if move is Capture:
+			moves.push_back(move)
+
+		if hist.is_empty():
+			continue
+		var prev: HistMove = hist.back()
+		if (
+			prev.piece != Piece.Role.PAWN or
+			prev.src != src + Vector2i(dx, 2 * dy) or
+			prev.move.dst != src + Vector2i(dx, 0)
+		):
+			continue
+		moves.push_back(Capture.new(move.dst, prev.move.dst))
 
 const orthogonal_dirs := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 const diagonal_dirs := [Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]
@@ -304,8 +340,6 @@ class Castling extends Move:
 		super(dst_)
 		rook = rook_
 
-# class Promotion extends Move
-
 static func in_bounds(loc: Vector2) -> bool:
 	return loc == loc.clamp(Vector2i(0, 0), Vector2i(7, 7))
 
@@ -323,7 +357,6 @@ static func loc_to_ix(loc: Vector2i) -> int:
 static func ix_to_loc(ix: int) -> Vector2i:
 	return Vector2i(ix % 8, ix / 8)
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
 	pass
 
