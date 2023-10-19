@@ -7,22 +7,22 @@
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fk822"]
 bg_color = Color(1, 0.47451, 0.815686, 0.862745)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_nnu1v"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_rpijx"]
 resource_local_to_scene = true
 atlas = ExtResource("2_x8r5v")
 region = Rect2(426.667, 0, 426.667, 426.5)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_3iywj"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_pix8e"]
 resource_local_to_scene = true
 atlas = ExtResource("2_x8r5v")
 region = Rect2(1706.67, 0, 426.667, 426.5)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_ulrd4"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_et5eu"]
 resource_local_to_scene = true
 atlas = ExtResource("2_x8r5v")
 region = Rect2(853.333, 0, 426.667, 426.5)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_805ye"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_r5jop"]
 resource_local_to_scene = true
 atlas = ExtResource("2_x8r5v")
 region = Rect2(1280, 0, 426.667, 426.5)
@@ -56,21 +56,21 @@ columns = 2
 
 [node name="Queen" parent="MarginContainer/Pieces" instance=ExtResource("2_olpr6")]
 layout_mode = 2
-texture = SubResource("AtlasTexture_nnu1v")
+texture = SubResource("AtlasTexture_rpijx")
 
 [node name="Rook" parent="MarginContainer/Pieces" instance=ExtResource("2_olpr6")]
 layout_mode = 2
-texture = SubResource("AtlasTexture_3iywj")
+texture = SubResource("AtlasTexture_pix8e")
 role = 4
 
 [node name="Bishop" parent="MarginContainer/Pieces" instance=ExtResource("2_olpr6")]
 layout_mode = 2
-texture = SubResource("AtlasTexture_ulrd4")
+texture = SubResource("AtlasTexture_et5eu")
 role = 2
 
 [node name="Knight" parent="MarginContainer/Pieces" instance=ExtResource("2_olpr6")]
 layout_mode = 2
-texture = SubResource("AtlasTexture_805ye")
+texture = SubResource("AtlasTexture_r5jop")
 role = 3
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

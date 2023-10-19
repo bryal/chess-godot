@@ -8,7 +8,7 @@ var white: bool = true:
 	set(x): role = x; update_texture()
 
 func _ready():
-	texture = texture.duplicate()
+	pass
 
 func _process(_delta):
 	pass

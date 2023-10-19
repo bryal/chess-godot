@@ -69,7 +69,6 @@ func _ready():
 		var white: bool = initial_position[0]
 		var role: Piece.Role = initial_position[1]
 		var pos: String = initial_position[2]
-		# print("white: %s, role: %s, pos: %s" % [white, role, pos])
 
 		var piece = scene_piece.instantiate()
 		piece.white = white

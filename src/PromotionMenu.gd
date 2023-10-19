@@ -1,10 +1,8 @@
 @tool
 extends PanelContainer
 
-var piece: Piece
-
-@export var white: bool:
-	set(x): white = x; for p in get_child(0).get_children(): p.white = x
+@export var piece: Piece:
+	set(x): piece = x; for p in $MarginContainer/Pieces.get_children(): p.white = x.white
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
