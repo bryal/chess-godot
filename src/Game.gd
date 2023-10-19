@@ -20,11 +20,6 @@ func promotion_menu(piece: Piece):
 	menu.piece = piece
 	add_child(menu)
 
-func select_promotion(piece: Piece, role: Piece.Role):
-	piece.role = role
-	turn_over()
-	paused = false
-
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	white_turn = true

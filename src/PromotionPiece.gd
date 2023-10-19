@@ -29,4 +29,4 @@ func _on_gui_input(event):
 			var menu = get_parent().get_parent().get_parent()
 			root.remove_child(menu)
 			menu.queue_free()
-			root.select_promotion(menu.piece, role)
+			root.get_node("Board").select_promotion(menu.piece, role)

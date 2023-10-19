@@ -17,6 +17,11 @@ class HistMove:
 		piece = piece_
 		src = src_
 		move = move_
+class HistPromotion extends HistMove:
+	var prom: Piece.Role
+	func _init(orig: Piece.Role, new: Piece.Role, src_: Vector2i, move_: Move):
+		super(orig, src_, move_)
+		prom = new
 
 var history: Array[HistMove] = []
 
@@ -118,6 +123,13 @@ func select_destination(dst: Square):
 		else:
 			get_parent().turn_over()
 
+func select_promotion(piece: Piece, role: Piece.Role):
+	var hist_move: HistMove = history.pop_back()
+	history.push_back(HistPromotion.new(piece.role, role, hist_move.src, hist_move.move))
+	piece.role = role
+	get_parent().turn_over()
+	get_parent().paused = false
+
 func capture_piece(piece: Piece):
 	piece.get_parent().remove_child(piece)
 	piece.queue_free()
@@ -132,6 +144,18 @@ func cancel_move():
 			square.target = null
 
 static func piece_moves(piece_loc: Vector2i, board_st: BoardState, hist: Array[HistMove]) -> Array[Move]:
+	var moves := reckless_piece_moves(piece_loc, board_st, hist)
+	var piece := board_st.get_piece(piece_loc)
+	for i in range(moves.size()-1, -1, -1):
+		var hmove := HistMove.new(piece.role, piece_loc, moves[i])
+		hist.push_back(hmove)
+		if !threats_to_king(piece.white, board_st.with_move(hmove), hist).is_empty():
+			moves.remove_at(i)
+		hist.pop_back()
+	return moves
+
+# All legal moves, except that they may threaten their own king
+static func reckless_piece_moves(piece_loc: Vector2i, board_st: BoardState, hist: Array[HistMove]) -> Array[Move]:
 	var moves: Array[Move] = []
 	var piece := board_st.get_piece(piece_loc)
 	if piece == null:
@@ -150,9 +174,6 @@ static func piece_moves(piece_loc: Vector2i, board_st: BoardState, hist: Array[H
 			add_rook_moves(moves, piece_loc, board_st)
 		Piece.Role.PAWN:
 			add_pawn_moves(moves, piece_loc, board_st, hist)
-	for i in range(moves.size()-1, -1, -1):
-		if threatens_king(moves[i]):
-			moves.remove_at(i)
 	return moves
 
 static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState, hist: Array[HistMove]) -> void:
@@ -163,7 +184,6 @@ static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState,
 			moves.push_back(move)
 
 	# Castling
-	print("castling?")
 	var psrc := board.get_piece(src)
 	var y0 := 0 if psrc.white else 7
 	if src.x != 4 or src.y != y0:
@@ -277,15 +297,33 @@ static func jump_move(src: Vector2i, dst: Vector2i, board: BoardState) -> Move:
 		return null
 	return Capture.new(dst, dst)
 
-static func threatens_king(_move: Move) -> bool:
-	return false # todo
+static func threats_to_king(king_white: bool, board: BoardState, hist: Array[HistMove]) -> Array[Vector2i]:
+	var threats: Array[Vector2i] = []
+	var king_loc := Vector2i.LEFT
+	for x in 8:
+		for y in 8:
+			var p := board.get_piece(Vector2i(x, y))
+			if p != null and p.role == Piece.Role.KING and p.white == king_white:
+				king_loc = Vector2i(x, y)
+	assert(king_loc != Vector2i.LEFT)
+	for x in 8:
+		for y in 8:
+			var src := Vector2i(x, y)
+			var psrc := board.get_piece(src)
+			if psrc == null or psrc.white == king_white:
+				continue
+			for move in reckless_piece_moves(src, board, hist):
+				if move is Capture and move.capture == king_loc:
+					threats.push_back(src)
+					break
+	return threats
 
 func current_board_state() -> BoardState:
 	var st := BoardState.new()
 	for ix in 64:
 		var piece := squares[ix].get_piece()
 		if piece != null:
-			st.place_piece(Board.ix_to_loc(ix), piece.white, piece.role)
+			st.place_piece(Board.ix_to_loc(ix), PieceLite.new(piece.white, piece.role))
 	return st
 
 class BoardState:
@@ -313,8 +351,29 @@ class BoardState:
 	func remove_piece(loc: Vector2i):
 		squares[Board.loc_to_ix(loc)] = 0xFF
 
-	func place_piece(loc: Vector2i, white: bool, role: Piece.Role):
-		squares[Board.loc_to_ix(loc)] = role | (0x80 if white else 0x00)
+	func place_piece(loc: Vector2i, piece: PieceLite):
+		squares[Board.loc_to_ix(loc)] = piece.role | (0x80 if piece.white else 0x00)
+
+	func move_piece(src: Vector2i, dst: Vector2i):
+		place_piece(dst, get_piece(src))
+		remove_piece(src)
+
+	func with_move(move: HistMove) -> BoardState:
+		var board := self.duplicate()
+		board.apply_move(move)
+		return board
+
+	func apply_move(hmove: HistMove) -> void:
+		var src := hmove.src
+		var move := hmove.move
+		if move is Capture:
+			remove_piece(move.capture)
+		elif move is Castling:
+			var passed_over: Vector2i = src + (move.dst - src).sign()
+			move_piece(move.rook, passed_over)
+		var piece := get_piece(src)
+		remove_piece(src)
+		place_piece(move.dst, PieceLite.new(piece.white, hmove.prom) if hmove is HistPromotion else piece)
 
 class PieceLite:
 	var white: bool
