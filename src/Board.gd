@@ -97,7 +97,8 @@ func select_source(src: Square):
 		cancel_move()
 		selected_piece = src_piece
 		src.selected = true
-		for move in Board.piece_moves(src.loc, current_board_state(), last_move):
+		var reckless := false
+		for move in Board.piece_moves(src.loc, current_board_state(), last_move, reckless):
 			square_by_loc(move.dst).target = move
 
 func select_destination(dst: Square):
@@ -146,24 +147,14 @@ func cancel_move():
 			square.selected = false
 			square.target = null
 
-static func piece_moves(piece_loc: Vector2i, board_st: BoardState, prev: HistMove) -> Array[Move]:
-	var moves := reckless_piece_moves(piece_loc, board_st, prev)
-	var piece := board_st.get_piece(piece_loc)
-	for i in range(moves.size()-1, -1, -1):
-		var hmove := HistMove.new(piece.role, piece_loc, moves[i])
-		if !threats_to_king(piece.white, board_st.with_move(hmove), hmove).is_empty():
-			moves.remove_at(i)
-	return moves
-
-# All legal moves, except that they may threaten their own king
-static func reckless_piece_moves(piece_loc: Vector2i, board_st: BoardState, prev: HistMove) -> Array[Move]:
+static func piece_moves(piece_loc: Vector2i, board_st: BoardState, prev: HistMove, reckless: bool) -> Array[Move]:
 	var moves: Array[Move] = []
 	var piece := board_st.get_piece(piece_loc)
 	if piece == null:
 		return moves
 	match piece.role: # lots of todo
 		Piece.Role.KING:
-			add_king_moves(moves, piece_loc, board_st, prev)
+			add_king_moves(moves, piece_loc, board_st, prev, reckless)
 		Piece.Role.QUEEN:
 			add_rook_moves(moves, piece_loc, board_st)
 			add_bishop_moves(moves, piece_loc, board_st)
@@ -175,9 +166,14 @@ static func reckless_piece_moves(piece_loc: Vector2i, board_st: BoardState, prev
 			add_rook_moves(moves, piece_loc, board_st)
 		Piece.Role.PAWN:
 			add_pawn_moves(moves, piece_loc, board_st, prev)
+	if not reckless:
+		for i in range(moves.size()-1, -1, -1):
+			var hmove := HistMove.new(piece.role, piece_loc, moves[i])
+			if !threats_to_king(piece.white, board_st.with_move(hmove), hmove).is_empty():
+				moves.remove_at(i)
 	return moves
 
-static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState, prev: HistMove) -> void:
+static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState, prev: HistMove, reckless: bool) -> void:
 	const deltas := orthogonal_dirs + diagonal_dirs
 	for delta in deltas:
 		var move := jump_move(src, src + delta, board)
@@ -190,7 +186,12 @@ static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState,
 	if board.ever_moved(src):
 		return
 	assert(src.x == 4 or src.y == y0)
-	for rook in [Vector2i(0, y0), Vector2i(7, y0)]:
+	var rooks := [Vector2i(0, y0), Vector2i(7, y0)]
+	if rooks.all(func(rook: Vector2i) -> bool: return board.ever_moved(rook)):
+		return
+	if not reckless and !threats_to_king(psrc.white, board, null).is_empty():
+		return # Can't castle out of check
+	for rook in rooks:
 		if board.ever_moved(rook):
 			continue
 		var prook := board.get_piece(rook)
@@ -200,7 +201,11 @@ static func add_king_moves(moves: Array[Move], src: Vector2i, board: BoardState,
 		if range(src.x + dx, rook.x, dx).any(func(x: int) -> bool:
 			return board.get_piece(Vector2i(x, y0)) != null
 		):
-			continue
+			continue # There mustn't be any pieces between the king and the rook
+		var through_board := board.duplicate()
+		through_board.move_piece(src, src + (rook - src).sign())
+		if not reckless and !threats_to_king(psrc.white, through_board, prev).is_empty():
+			continue # Can't castle through check
 		var dst: Vector2i = src + (rook - src).sign() * 2
 		moves.push_back(Castling.new(dst, rook))
 
@@ -298,7 +303,8 @@ static func threats_to_king(king_white: bool, board: BoardState, prev: HistMove)
 			var psrc := board.get_piece(src)
 			if psrc == null or psrc.white == king_white:
 				continue
-			for move in reckless_piece_moves(src, board, prev):
+			var reckless := true
+			for move in piece_moves(src, board, prev, reckless):
 				if move is Capture and move.capture == king_loc:
 					threats.push_back(src)
 					break
